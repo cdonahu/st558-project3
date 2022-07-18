@@ -1,0 +1,17 @@
+---
+title: "Final-Project"
+author: "Claudia Donahue"
+date: '2022-07-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Read in crash data}
+data <- readr::read_csv(file = "./AviationData.csv",
+                        show_col_types = FALSE
+                        )
+
+```
