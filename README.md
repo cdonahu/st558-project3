@@ -10,10 +10,10 @@ App users need the following packages installed before running the app:
 
 The following code will install the required packages:  
 ```
-install.packages("tidyverse", "shiny")
+install.packages(c("tidyverse", "shiny"))
 ```
 
 The code below will allow the user to run the app from RStudio using `shiny::runGitHub()`:  
 ```
-shiny::runGitHub("cdonahu/st558-project3")
+shiny::runGitHub("st558-project3", "cdonahu", subdir = "/Strokes")
 ```
