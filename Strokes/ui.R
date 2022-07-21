@@ -6,11 +6,14 @@
 
 library(shiny)
 library(caret)
+library(tidyverse)
+library(DT)
 
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
                         show_col_types = FALSE)
-# Make some married column into factors
+# Make gender/ married columns into factors
+data$gender <- factor(data$gender)
 data$ever_married <- factor(data$ever_married)
 # drop id column
 data <- dplyr::select(data, -id)
@@ -22,9 +25,9 @@ data$bmi <- as.numeric(data$bmi)
 dummies <- dummyVars(age ~ ., data = data)
 addDummy <- data.frame(predict(dummies, newdata = data))
 # keep the columns I want
-data <- data.frame(cbind(data[,c(2:5, 8:9,11)], addDummy[,c(1,3,8:14, 17:20)]))
+data <- data.frame(cbind(data[,c(1:5, 8:9,11)], addDummy[,c(8:14, 17:20)]))
 # Reorder columns so stroke is last 
-columnOrder <- c(1:6, 8:20, 7)
+columnOrder <- c(1:7, 9:19, 8)
 data <- data[, columnOrder]
 
 # Define UI for application that draws a histogram
@@ -55,12 +58,14 @@ shinyUI(fluidPage(
                       sidebarLayout(
                         sidebarPanel(
                           selectInput("var", label = "Variables to Summarize", 
-                                      choices = c("Age",
-                                                  "Glucose",
-                                                  "BMI"),
+                                      choices = c("Age" = "age",
+                                                  "Glucose Level" = "avg_glucose_level",
+                                                  "Body Mass Index (BMI)" = "bmi"),
                                       selected = "Age")
                         ),
-                        mainPanel()
+                        mainPanel(
+                          dataTableOutput("dataTable")
+                        )
                       )),
              navbarMenu("Modeling",
                         tabPanel("Info"),

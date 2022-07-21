@@ -11,7 +11,8 @@ library(DT)
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
                         show_col_types = FALSE)
-# Make some married column into factors
+# Make gender/ married columns into factors
+data$gender <- factor(data$gender)
 data$ever_married <- factor(data$ever_married)
 # drop id column
 data <- dplyr::select(data, -id)
@@ -23,9 +24,9 @@ data$bmi <- as.numeric(data$bmi)
 dummies <- dummyVars(age ~ ., data = data)
 addDummy <- data.frame(predict(dummies, newdata = data))
 # keep the columns I want
-data <- data.frame(cbind(data[,c(2:5, 8:9,11)], addDummy[,c(1,3,8:14, 17:20)]))
+data <- data.frame(cbind(data[,c(1:5, 8:9,11)], addDummy[,c(8:14, 17:20)]))
 # Reorder columns so stroke is last 
-columnOrder <- c(1:6, 8:20, 7)
+columnOrder <- c(1:7, 9:19, 8)
 data <- data[, columnOrder]
 
 
@@ -35,9 +36,10 @@ shinyServer(function(input, output) {
   
   output$summary <- DT::renderDataTable({
     var <- input$var
-    GermanCreditSub <- GermanCredit[, c("Class", "InstallmentRatePercentage", var), drop = FALSE]
-    tab <- aggregate(GermanCreditSub[[var]] ~ Class + InstallmentRatePercentage, data = GermanCreditSub, FUN = mean)
-    tab[, 3] <- round(tab[, 3], input$round)
+    round <- 2
+    data <- data[, c("gender", "ever_married", var), drop = FALSE]
+    tab <- aggregate(data[[var]] ~ gender + ever_married, data = data, FUN = mean)
+    tab[, 3] <- round(tab[, 3], 2) #input$round)
     names(tab)[3] <- paste0("Average ", var)
     tab
   })
