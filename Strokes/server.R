@@ -36,23 +36,41 @@ shinyServer(function(input, output) {
   
 # Data exploration tab
   output$graph <- renderPlot({
+    df <- data %>% group_by(input$var, stroke) %>% count(stroke)
     # Line graph
-    if(input$plotType == "line"){}
-    # Boxplot
-    else if(input$plotType == "box"){}
+    if(input$plotType == "line"){
+      ggplot(df) + geom_line(x = input$var, y = n)
+    }
+    # Bar graph
+    else if(input$plotType == "bar"){
+      xAxis <- "gender" # input$xAxis choices are work_type, residence,etc.
+      g <- ggplot(data)
+      g + geom_bar(mapping = aes(x = xAxis,fill=stroke))
+    }
     # Scatterplot
-    else if(input$plotType == "scatterplot"){}
+    else if(input$plotType == "scatterplot"){
+      df <- data %>% group_by(age, stroke) %>% count(stroke)
+      g <- ggplot(df, aes(x = age, y = n))
+      if(input$age){
+        g + geom_point(size = input$size, 
+                       aes(col = stroke,
+                           alpha = 0.5))
+      } else {
+        g + geom_point(size = input$size, 
+                       aes(col = gender),
+                       alpha = ever_married)
+      }
+    }
   })
   
   output$summary <- DT::renderDataTable({
-    var <- input$var
     round <- 2
-    data <- data[, c("gender", "ever_married", var), drop = FALSE]
-    tab <- aggregate(data[[var]] ~ gender + ever_married, 
+    data <- data[, c("gender", "ever_married", input$var), drop = FALSE]
+    tab <- aggregate(data[[input$var]] ~ gender + ever_married, 
                      data = data, 
                      FUN = input$summType)
-    tab[, 3] <- round(tab[, 3], 2) #input$round)
-    names(tab)[3] <- paste0(str_to_title(input$summType), var)
+    tab[, 3] <- round(tab[, 3], round) #input$round)
+    names(tab)[3] <- paste(str_to_title(summType), str_to_title(input$var), sep = " ")
     tab
   })
   

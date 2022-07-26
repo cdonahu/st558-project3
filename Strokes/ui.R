@@ -57,26 +57,28 @@ shinyUI(fluidPage(
              tabPanel("Data Exploration",
                       sidebarLayout(
                         sidebarPanel(
-                          selectInput("var", label = "Variables to Summarize", 
+                          selectInput("var", 
+                                      label = "Variables to Summarize", 
                                       choices = c("Age" = "age",
                                                   "Glucose Level" = "avg_glucose_level",
                                                   "Body Mass Index (BMI)" = "bmi"),
-                                      selected = "Age")
-                        ),
-                        selectInput("summType", label = "Type of Summary",
+                                      selected = "Age"),
+                        selectInput("summType", 
+                                    label = "Type of Summary",
                                     choices = c("Mean" = "mean",
                                                 "Median" = "median"),
-                                    selected = "Mean"
-                        ),
-                        selectInput("plotType", label = "Type of Graph",
+                                    selected = "Mean"),
+                        selectInput("plotType", 
+                                    label = "Type of Graph",
                                     choices = c("Line Graph" = "line",
-                                                "Boxplot" = "box",
-                                                "Scatterplot" = "scatterplot"),
-                                    selected = "Mean"
+                                                "Bar Graph" = "bar",
+                                                "Scatter Plot" = "scatterplot"),
+                                    selected = "Mean")
                         ),
                         mainPanel(
                           plotOutput("graph"),
-                          dataTableOutput("dataTable")
+                          br(),
+                          dataTableOutput("summary")
                         )
                       )),
 # Modeling Tab

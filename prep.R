@@ -15,9 +15,11 @@ data$Residence_type <- factor(data$Residence_type)
 data$smoking_status <- factor(data$smoking_status)
 # drop id column
 data <- dplyr::select(data, -id)
-# change bmi to a number, and "N/A" to NA
-data$bmi <- as.numeric(data$bmi)
-# Need to handle missing values still
+# change bmi to a number
+data$bmi <- as.double(data$bmi)
+# replace missing bmi values with mean bmi
+data$bmi[is.na(data$bmi)] <- mean(data$bmi, na.rm = TRUE)
+
 
 ############# About Page #################
 ########## Data Exploration page ##########
@@ -29,7 +31,7 @@ DT::datatable({
   data <- data[, c("gender", "ever_married", var), drop = FALSE]
   tab <- aggregate(data[[var]] ~ gender + ever_married, data = data, FUN = summType)
   tab[, 3] <- round(tab[, 3], round)
-  names(tab)[3] <- paste0(str_to_title(summType), var)
+  names(tab)[3] <- paste(str_to_title(summType), str_to_title(var), sep = " ")
   tab
 })
 #### make a graph that changes type (scatter / histogram or bar?) ######
