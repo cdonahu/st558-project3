@@ -17,7 +17,7 @@ data$smoking_status <- factor(data$smoking_status)
 data <- dplyr::select(data, -id)
 # change bmi to a number, and "N/A" to NA
 data$bmi <- as.numeric(data$bmi)
-
+# Need to handle missing values still
 
 ############# About Page #################
 ########## Data Exploration page ##########

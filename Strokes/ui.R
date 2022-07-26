@@ -53,7 +53,7 @@ shinyUI(fluidPage(
                       )
                       
                       ),
-             
+# Data Exploration Tab             
              tabPanel("Data Exploration",
                       sidebarLayout(
                         sidebarPanel(
@@ -63,14 +63,31 @@ shinyUI(fluidPage(
                                                   "Body Mass Index (BMI)" = "bmi"),
                                       selected = "Age")
                         ),
+                        selectInput("summType", label = "Type of Summary",
+                                    choices = c("Mean" = "mean",
+                                                "Median" = "median"),
+                                    selected = "Mean"
+                        ),
+                        selectInput("plotType", label = "Type of Graph",
+                                    choices = c("Line Graph" = "line",
+                                                "Boxplot" = "box",
+                                                "Scatterplot" = "scatterplot"),
+                                    selected = "Mean"
+                        ),
                         mainPanel(
+                          plotOutput("graph"),
                           dataTableOutput("dataTable")
                         )
                       )),
+# Modeling Tab
              navbarMenu("Modeling",
+  # Subtab for Info
                         tabPanel("Info"),
+  # Subtab for Fitting
                         tabPanel("Fitting"),
+  # Subtab for Prediction
                         tabPanel("Prediction")),
+# Data Tab
              tabPanel("Data")
   )
     

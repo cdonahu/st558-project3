@@ -30,17 +30,29 @@ columnOrder <- c(1:7, 9:19, 8)
 data <- data[, columnOrder]
 
 
-# Define server logic required to draw a histogram
+# Define server logic 
 shinyServer(function(input, output) {
   
+  
+# Data exploration tab
+  output$graph <- renderPlot({
+    # Line graph
+    if(input$plotType == "line"){}
+    # Boxplot
+    else if(input$plotType == "box"){}
+    # Scatterplot
+    else if(input$plotType == "scatterplot"){}
+  })
   
   output$summary <- DT::renderDataTable({
     var <- input$var
     round <- 2
     data <- data[, c("gender", "ever_married", var), drop = FALSE]
-    tab <- aggregate(data[[var]] ~ gender + ever_married, data = data, FUN = mean)
+    tab <- aggregate(data[[var]] ~ gender + ever_married, 
+                     data = data, 
+                     FUN = input$summType)
     tab[, 3] <- round(tab[, 3], 2) #input$round)
-    names(tab)[3] <- paste0("Average ", var)
+    names(tab)[3] <- paste0(str_to_title(input$summType), var)
     tab
   })
   
