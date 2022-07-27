@@ -112,6 +112,7 @@ shinyUI(fluidPage(
   # Subtab for Info
                         tabPanel("Info",
                                  mainPanel(
+                                   h3("Modeling Information"),
                                    h4("We will fit three different types of classification model, a set of supervised learning techniques using known-outcome data to make predictions on new data. In this case, the models will predict whether or not an observation in the data set had a stroke."),
                                    br(),
                                    h4("The types of model we will use are: "),
@@ -123,6 +124,7 @@ shinyUI(fluidPage(
                         ),
   ################# Subtab for Fitting #################
                         tabPanel("Fitting",
+                                 h3("Model Fitting"),
                                  sidebarLayout(
                                    sidebarPanel(
                                      h4("Select the proportion of data to keep in the training set, which we will use to fit the models. The remainder of the data will be held in the testing set. "),
@@ -159,6 +161,7 @@ shinyUI(fluidPage(
                                 
   ################# Subtab for Prediction #################
                         tabPanel("Prediction",
+                                 h3("Model Predictions"),
                                  sidebarLayout(
                                    sidebarPanel(
                                      radioButtons("modelForPred", 

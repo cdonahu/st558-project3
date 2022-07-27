@@ -51,24 +51,26 @@ shinyServer(function(input, output) {
 # Data exploration tab
   output$graph <- renderPlot({
     
-    # Bar graph Error Continuous value supplied to discrete scale
+    # Bar graph -- only one bar showing up??
     if(input$plotType == "bar"){
-      df1 <- df %>%
-        group_by(input$bars, stroke) %>% # hypertension or heart_disease
-        count(stroke)
-      df1 %>%
+      df %>%
+        group_by(input$bars, stroke) %>%
+        count(stroke) %>%
         ggplot(mapping = aes(x = input$bars, y = n, fill = stroke) ) +
         geom_bar(stat = "identity", position = "fill") +
-        labs(title = paste0("Percentage of subjects with ", str_to_title(input$bars), " vs. without ", str_to_title(input$bars)), 
+        labs(title = paste0("Percentage of Observations with ",
+                            str_to_title(input$bars),
+                            " vs. without ",
+                            str_to_title(input$bars)), 
              x = str_to_title(input$bars), 
              y = "Percentage") +
         scale_fill_brewer(palette = "Paired")
     }
     
-    # Scatterplot 
+    # Scatterplot  -- points not showing up??
     else if(input$plotType == "scatterplot"){
-      df2 <- data %>% group_by(age, input$points, stroke) %>% count(stroke)
-      ggplot(df2, aes(x = age, y = n, color = input$points)) +
+      df  %>% group_by(age, input$points, stroke) %>% count(stroke) %>%
+      ggplot(aes(x = age, y = n, color = input$points)) +
         labs(title = paste0("Age Distribution by ", str_to_title(input$points)),
              x = "Age", 
              y = "Number of Observations")
