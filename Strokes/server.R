@@ -13,9 +13,13 @@ library(randomForest)
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
                         show_col_types = FALSE)
-# Make gender/ married columns into factors
+# Make categorical columns into factors
+data$stroke <- factor(data$stroke)
 data$gender <- factor(data$gender)
 data$ever_married <- factor(data$ever_married)
+data$work_type <- factor(data$work_type)
+data$Residence_type <- factor(data$Residence_type)
+data$smoking_status <- factor(data$smoking_status)
 # drop id column
 data <- dplyr::select(data, -id)
 # change bmi to a number
@@ -84,6 +88,11 @@ shinyServer(function(input, output) {
   
   # 0. Splitting the data
   eventReactive(input$go, {
+    
+    # Create a progress bar
+    withProgress(message = "Fitting Models",
+                 detail = 'Splitting Data', value = 0, {
+                   
     set.seed(89)
     strokeIdx <- createDataPartition(y = data2$stroke,
                                      p = input$splitPct,
@@ -92,34 +101,53 @@ shinyServer(function(input, output) {
     testing <- data2[-strokeIdx, ]
 
   # 1. Logistic Regression 
+    
+    # Increment the progress bar, and update the detail text.
+    setProgress(1/4, detail = "Logistic Regression")
+    
     lrFit <- train(stroke ~ age + bmi, # Update as user selects
                      data = training[1:11], 
                      method = "glm",
                      family = "binomial",
                      preProcess = c("center", "scale"),
                      trControl = trainControl(method = "cv", number = 5))
+    output$lrSummary <- renderPrint({
+      summary(lrFit)
+    })
   # 2. Classification Tree
+    
+    # Increment the progress bar, and update the detail text.
+    setProgress(2/4, detail = "Classification Tree")
+    
   cTree <- train(x = training[,1:10], # Update as user selects
-                 y = training[,11],
+                 y = training$stroke,
                  method = "rpart",
                  preProcess = c("center", "scale"),
                  cp = 0.001,
-                 trControl = trainControl(method = "repeatedcv", 
-                                          number = 5, repeats = 3)
-  )
-  
+                 trControl = trainControl(method = "cv", 
+                                          number = 5))
+  output$ctreeSummary <- renderPrint({
+    summary(cTree)
+  })
   # 3. Random Forest 
+  
+  # Increment the progress bar, and update the detail text.
+  setProgress(3/4, detail = "Random Forest Model")
+  
   # set up the mtry parameter 
   tunegrid <- expand.grid(.mtry=c(1:10)) # Update as user selects
   
   #train model
   rfFit <- train(x = training[,1:10], # Update as user selects
-                 y = training[,11],
+                 y = training$stroke,
                  method = "rf",
                  tuneGrid = tunegrid,
                  preProcess = c("center", "scale"),
-                 trControl = trainControl(method = "repeatedcv", 
-                                          number = 5, repeats = 3)
-  )
-  }) # end go-button eventreactive
+                 trControl = trainControl(method = "cv", 
+                                          number = 5))
+  output$rfSummary <- renderPrint({
+    summary(rfFit)
+  })
+    })
+  }) # end go-button eventreactive}
 })

@@ -12,9 +12,13 @@ library(DT)
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
                         show_col_types = FALSE)
-# Make gender/ married columns into factors
+# Make categorical columns into factors
+data$stroke <- factor(data$stroke)
 data$gender <- factor(data$gender)
 data$ever_married <- factor(data$ever_married)
+data$work_type <- factor(data$work_type)
+data$Residence_type <- factor(data$Residence_type)
+data$smoking_status <- factor(data$smoking_status)
 # drop id column
 data <- dplyr::select(data, -id)
 # change bmi to a number
@@ -38,7 +42,7 @@ data2 <- data.frame(cbind(data[,c(1:5, 8:9,11)], addDummy[,c(8:14, 17:20)]))
 columnOrder <- c(1:7, 9:19, 8)
 data2 <- data2[, columnOrder]
 
-# Define UI for application that draws a histogram
+################# Define UI #################
 shinyUI(fluidPage(
   
   # Application title
@@ -60,7 +64,7 @@ shinyUI(fluidPage(
                           tags$li("Data: browse through the data set, and save a file"))
                       )
                       ),
-# Data Exploration Tab             
+################# Data Exploration Tab #################
              tabPanel("Data Exploration",
                       sidebarLayout(
                         sidebarPanel(
@@ -103,7 +107,7 @@ shinyUI(fluidPage(
                           DTOutput("summary")
                         )
                       )),
-# Modeling Tab
+################# Modeling Tab #################
              navbarMenu("Modeling",
   # Subtab for Info
                         tabPanel("Info",
@@ -117,7 +121,7 @@ shinyUI(fluidPage(
                                      tags$li("Random Forest Classification"))
                                  )
                         ),
-  # Subtab for Fitting
+  ################# Subtab for Fitting #################
                         tabPanel("Fitting",
                                  sidebarLayout(
                                    sidebarPanel(
@@ -145,15 +149,28 @@ shinyUI(fluidPage(
                                      actionButton("go", "Fit My Models!")
                                    ),
                                    mainPanel(
-                                     
+                                     h4("Logistic Regression Model"),
+                                     verbatimTextOutput("lrSummary"),
+                                     h4("Classification Tree Model"),
+                                     verbatimTextOutput("ctreeSummary"),
+                                     h4("Random Forest Model"),
+                                     verbatimTextOutput("rfSummary")
                                    ))),
                                 
-  # Subtab for Prediction (disappeared)
-                        tabPanel("Prediction")
-    ),
-# Data Tab (went as a subtab under Modeling)
+  ################# Subtab for Prediction #################
+                        tabPanel("Prediction",
+                                 sidebarLayout(
+                                   sidebarPanel(
+                                     radioButtons("modelForPred", 
+                                                  label = "Choose a model to make predictions on the test data",
+                                                  choices = c("Logistic Regression" = "lrFit",
+                                                              "Classification Tree" = "cTree",
+                                                              "Random Forest" = "rfFit"),
+                                                  selected = "scatterplot")),
+                                   mainPanel(#prediction print-outs
+                                     )),
+################# Data Tab #################
              tabPanel("Data")
   
     
-  )
-))
+)))))
