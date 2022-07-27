@@ -30,7 +30,10 @@ data$bmi[is.na(data$bmi)] <- mean(data$bmi, na.rm = TRUE)
 df <- data %>%
   mutate(hypertension = ifelse(hypertension == 0, "No","Yes")) %>%
   mutate(heart_disease = ifelse(heart_disease == 0, "No","Yes")) %>%
-  mutate(stroke = ifelse(stroke == 0, "No","Yes"))
+  mutate(stroke = ifelse(stroke == 0, "No","Yes")) 
+df$hypertension <- factor(df$hypertension) 
+df$heart_disease <- factor(df$heart_disease) 
+df$stroke <- factor(df$stroke) 
 
 # Make some dummy variables
 # gender, work_type, Residence_type, smoking_status
