@@ -23,43 +23,7 @@ data$bmi[is.na(data$bmi)] <- mean(data$bmi, na.rm = TRUE)
 
 ############# About Page #################
 ########## Data Exploration page ##########
-# make a numerical summary that changes type of summary (mean/median)
-DT::datatable({
-  var <- "age" # choices for input$var are age, avg_glucose_level, bmi
-  summType <- "mean" # choices for input$summType are mean, median
-  round <- 2
-  data <- data[, c("gender", "ever_married", var), drop = FALSE]
-  tab <- aggregate(data[[var]] ~ gender + ever_married, data = data, FUN = summType)
-  tab[, 3] <- round(tab[, 3], round)
-  names(tab)[3] <- paste(str_to_title(summType), str_to_title(var), sep = " ")
-  tab
-})
-#### make a graph that changes type (scatter / histogram or bar?) ######
-plotType <- scatter # choices for input$plotType are scatter, bar
-# If the user selects scatter, they can choose alpha for points to be 
-### heart_disease or ever_married
-output$strokePlot <- renderPlot({
 
-  # Logic to set point aesthetics based on checkboxes
-  if(input$plotType == "scatter"){
-    g <- ggplot(data, aes(x = age, y = bmi))
-    if(input$heart_disease){
-      g + geom_point(size = input$size, 
-                     aes(col = gender,
-                         alpha = heart_disease))
-    } else {
-      g + geom_point(size = input$size, 
-                     aes(col = gender),
-                     alpha = ever_married)
-    }
-    # If the user chooses bar graph, they can choose from 
-    ## a bunch of variables for x
-  } else {
-    xAxis <- "gender" # input$xAxis choices are work_type, residence,etc.
-    g <- ggplot(data)
-    g + geom_bar(mapping = aes(x = xAxis,fill=stroke))
-  }
-})
 
 ########### Modeling Page ##############
 ##### tab1 Modeling Info #########
@@ -70,7 +34,7 @@ output$strokePlot <- renderPlot({
 
 ##### tab2 Model Fitting ########
 # split data into training /test set
-proportion <- 0.8 # this will be input$proportion from sliderInput 0.6 to 0.9
+splitPct <- 0.8 # input$splitPct 
 set.seed(89)
 strokeIdx <- createDataPartition(y = data$stroke, p = proportion, list = FALSE)
 training <- data[strokeIdx, ]

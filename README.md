@@ -8,10 +8,13 @@ App users need the following packages installed before running the app:
 - tidyverse  
 - shiny  
 - caret  
+- DT  
+- rpart  
+- randomForest
 
 The following code will install the required packages:  
 ```
-install.packages(c("tidyverse", "shiny", "caret"))
+install.packages(c("tidyverse", "shiny", "caret", "DT", "rpart", "randomForest"))
 ```
 
 The code below will allow the user to run the app from RStudio using `shiny::runGitHub()`:  
