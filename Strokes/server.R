@@ -27,7 +27,7 @@ data$bmi <- as.double(data$bmi)
 # replace missing bmi values with mean bmi
 data$bmi[is.na(data$bmi)] <- mean(data$bmi, na.rm = TRUE)
 
-# Make a special df for graphing
+########### Make a special df for graphing ########### 
 df <- data %>%
   mutate(hypertension = ifelse(hypertension == 0, "No","Yes")) %>%
   mutate(heart_disease = ifelse(heart_disease == 0, "No","Yes")) %>%
@@ -36,7 +36,7 @@ df <- data %>%
   df$heart_disease <- factor(df$heart_disease) 
   df$stroke <- factor(df$stroke) 
 
-# Make some dummy variables
+  ###########  Make some dummy variables ########### 
 # gender, work_type, Residence_type, smoking_status
 dummies <- dummyVars(age ~ ., data = data)
 addDummy <- data.frame(predict(dummies, newdata = data))
@@ -47,14 +47,14 @@ columnOrder <- c(1:7, 9:19, 8)
 data2 <- data2[, columnOrder]
 
 
-# Define server logic 
+###########  Define server logic ########### 
 shinyServer(function(input, output) {
   
   
-# Data exploration tab
+  ###########  Data exploration tab ########### 
   output$graph <- renderPlot({
     
-    # Bar graph 
+    ###########  Bar graph ########### 
     if(input$plotType == "bar"){
       df0 <- df %>%
         group_by(!!as.symbol(input$bars), stroke) %>% count(stroke) 
@@ -69,7 +69,7 @@ shinyServer(function(input, output) {
         scale_fill_brewer(palette = "Paired")
     }
     
-    # Scatterplot  -- points not showing up??
+    ###########  Scatterplot  ########### 
     else if(input$plotType == "scatterplot"){
       df1 <- df  %>% group_by(age, !!as.symbol(input$points), stroke) %>% 
         count(stroke) 
@@ -92,10 +92,10 @@ shinyServer(function(input, output) {
     tab
   })
   
-  # 0. Splitting the data
-  eventReactive(input$go, {
+  ###########  0. Splitting the data ########### 
+  modeling <- eventReactive(input$go, {
     
-    # Create a progress bar
+    # Create a progress bar (not actually showing up, though)
     withProgress(message = "Fitting Models",
                  detail = 'Splitting Data', value = 0, {
                    
@@ -106,13 +106,16 @@ shinyServer(function(input, output) {
     training <- data2[strokeIdx, ]
     testing <- data2[-strokeIdx, ]
 
-  # 1. Logistic Regression 
+    #########  1. Logistic Regression ######### 
     
     # Increment the progress bar, and update the detail text.
     setProgress(1/4, detail = "Logistic Regression")
     
-    lrFit <- train(stroke ~ age + bmi, # Update as user selects
-                     data = training[1:11], 
+    # Subset user-selected variables to use in models
+    modelingData <- training[,c(input$lrVars, "stroke")]
+    # Train model
+    lrFit <- train(stroke ~ ., 
+                     data = modelingData, 
                      method = "glm",
                      family = "binomial",
                      preProcess = c("center", "scale"),
@@ -120,13 +123,13 @@ shinyServer(function(input, output) {
     output$lrSummary <- renderPrint({
       summary(lrFit)
     })
-  # 2. Classification Tree
+    ###########  2. Classification Tree ########### 
     
     # Increment the progress bar, and update the detail text.
     setProgress(2/4, detail = "Classification Tree")
     
-  cTree <- train(x = training[,1:10], # Update as user selects
-                 y = training$stroke,
+  cTree <- train(stroke ~ .,
+                 data = modelingData,
                  method = "rpart",
                  preProcess = c("center", "scale"),
                  cp = 0.001,
@@ -135,17 +138,17 @@ shinyServer(function(input, output) {
   output$ctreeSummary <- renderPrint({
     summary(cTree)
   })
-  # 3. Random Forest 
+  ###########  3. Random Forest ########### 
   
   # Increment the progress bar, and update the detail text.
   setProgress(3/4, detail = "Random Forest Model")
   
   # set up the mtry parameter 
-  tunegrid <- expand.grid(.mtry=c(1:10)) # Update as user selects
+  tunegrid <- expand.grid(.mtry=c(1:input$mtry)) # Update as user selects
   
   #train model
-  rfFit <- train(x = training[,1:10], # Update as user selects
-                 y = training$stroke,
+  rfFit <- train(stroke ~ .,
+                 data = modelingData,
                  method = "rf",
                  tuneGrid = tunegrid,
                  preProcess = c("center", "scale"),
@@ -154,6 +157,58 @@ shinyServer(function(input, output) {
   output$rfSummary <- renderPrint({
     summary(rfFit)
   })
+  # Feature importance for random forest
+  output$featureImport <- renderPrint({ 
+    varImp(rfFit, scale = FALSE)
+  })
+  
+  # Get RMSEs
+  lrRMSE <- RMSE(predict(lrFit, newdata = testing), testing$stroke)
+  ctRMSE <- RMSE(predict(cTree, newdata = testing), testing$stroke)
+  rfRMSE <- RMSE(predict(rfFit, newdata = testing), testing$stroke)
+  
+  # Table of RMSEs
+  output$rmse <- renderDT({
+    data.frame(LogRegression = lrRMSE,
+               ClassTree = ctRMSE,
+               RandomForest = rfRMSE)
+  })
+  c(lrFit, cTree, rfFit)
+  
     })
-  }) # end go-button eventreactive}
+  }) # end go-button eventreactive} 
+  observe(modeling)
+  
+  ####### Making predictions #######
+  # Update based on user selected variables
+  observeEvent(input$goPredict, { 
+    predVars <- data.frame(gender = input$gender, 
+                           age = input$age, 
+                           hypertension = input$hypertension, 
+                           heart_disease = input$heart_disease, 
+                           ever_married = input$ever_married, 
+                           work_type = input$work_type, 
+                           Residence_type = input$Residence_type, 
+                           avg_glucose_level = input$avg_glucose_level, 
+                           bmi = input$bmi, 
+                           smoking_status = input$smoking_status)
+    # predict()
+    if(input$modelForPred == "lr"){ 
+      model <- modeling()[[1]]
+      prediction <- predict(model, newdata = predVars)
+    }
+    else if(input$predModel == "ct"){ 
+      model <- modeling()[[2]]
+      prediction <- predict(model, newdata = predVars)
+    }
+    else { 
+      model <- modeling()[[3]]
+      prediction <- predict(model, newdata = predVars)
+    }
+    
+    output$prediction <- renderPrint({ 
+      prediction 
+    })
+  })
 })
+

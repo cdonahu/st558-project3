@@ -1,13 +1,16 @@
-##Solution to first app homework  
+## 
 ##Claudia Donahue
 # Final Project Shiny App
 # ST558, Summer 2022
 #
 
+
 library(shiny)
 library(caret)
 library(tidyverse)
 library(DT)
+library(rpart)
+library(randomForest)
 
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
@@ -151,32 +154,85 @@ shinyUI(fluidPage(
                                                              "Smoking Status" = "smoking_status"),
                                                  selected = "age",
                                                  multiple = TRUE),
+                                     numericInput("mtry", 
+                                                  "'mtry': Number of Variables to Randomly Sample at Each Tree Split",
+                                                  value = 3,
+                                                  min = 1,
+                                                  max = 4,
+                                                  step = 1
+                                                  ),
                                      actionButton("go", "Fit My Models!")
                                    ),
                                    mainPanel(
                                      h4("Logistic Regression Model"),
                                      verbatimTextOutput("lrSummary"),
+                                     br(),
                                      h4("Classification Tree Model"),
                                      verbatimTextOutput("ctreeSummary"),
+                                     br(),
                                      h4("Random Forest Model"),
                                      verbatimTextOutput("rfSummary")
                                    ))),
                                 
-  ################# Subtab for Prediction #################
+  ############## Subtab for Prediction ###############
                         tabPanel("Prediction",
                                  h3("Model Predictions"),
                                  sidebarLayout(
                                    sidebarPanel(
                                      radioButtons("modelForPred", 
-                                                  label = "Choose a model to make predictions on the test data",
-                                                  choices = c("Logistic Regression" = "lrFit",
-                                                              "Classification Tree" = "cTree",
-                                                              "Random Forest" = "rfFit"),
-                                                  selected = "scatterplot")),
-                                   mainPanel(#prediction print-outs
+                                                  label = "Choose a model to make predictions:",
+                                                  choices = c("Logistic Regression" = "lr",
+                                                              "Classification Tree" = "ct",
+                                                              "Random Forest" = "rf"))),
+                                   selectInput("gender", "Gender",
+                                               choices = c("Female",
+                                                           "Male",
+                                                           "Other")),
+                                   numericInput("age", "Age",
+                                               value = 38, min = 0, max = 125,
+                                               step = 1),
+                                   selectInput("hypertension", "Hypertension",
+                                               choices = c("Yes" = 1,
+                                                           "No" = 0)),
+                                   selectInput("heart_disease", "Heart Disease",
+                                               choices = c("Yes" = 1,
+                                                           "No" = 0)),
+                                   selectInput("ever_married", "Ever Married",
+                                               choices = c("Yes" = 1,
+                                                           "No" = 0)),
+                                   selectInput("work_type", "Work Type",
+                                               choices = c("Is a Child" = "children",
+                                                           "Government Job" = "Govt_job",
+                                                           "Has Never Worked" = "Never_worked",
+                                                           "Private Sector Job" = "Private",
+                                                           "Self-Employed" = "Self-employed")),
+                                   selectInput("Residence_type", "Type of Residence",
+                                               choices = c("Urban",
+                                                           "Rural")),
+                                   numericInput("avg_glucose_level", "Average Glucose Level",
+                                                value = 95, min = 50, max = 275,
+                                                step = 5),
+                                   numericInput("bmi", "Body Mass Index",
+                                                value = 28, min = 7, max = 100,
+                                                step = 1),
+                                   selectInput("smoking_status", "Smoking Status",
+                                               choices = c("Never Smoked" = "never smoked",
+                                                           "Formerly Smoked" = "formerly smoked",
+                                                           "Smokes" = "smokes",
+                                                           "Unknown" = "Unknown")),
+                                   
+                                   mainPanel(# scoring models
+                                     h3("Predicted Outcome"),
+                                     verbatimTextOutput("prediction")
+                                     
                                      )),
 ################# Data Tab #################
-             tabPanel("Data")
+             tabPanel("Data",
+                      titlePanel("Data Set"),
+                      sidebarLayout(
+                        sidebarPanel(),
+                        mainPanel()
+                      ))
   
     
 )))))
