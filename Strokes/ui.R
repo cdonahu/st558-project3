@@ -11,6 +11,7 @@ library(tidyverse)
 library(DT)
 library(rpart)
 library(randomForest)
+library(rpart.plot)
 
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
@@ -140,7 +141,7 @@ shinyUI(fluidPage(
                                                  max = 0.9,
                                                  value = 0.8,
                                                  step = 0.05),
-                                     selectInput("fitVars",
+                                     checkboxGroupInput("fitVars",
                                                  label = "Variables to Use in Model Fitting",
                                                  choices = c("Hypertension" = "hypertension",
                                                              "Heart Disease" = "heart_disease",
@@ -151,27 +152,38 @@ shinyUI(fluidPage(
                                                              "Residence Type" = "Residence_type",
                                                              "Glucose Level" = "avg_glucose_level",
                                                              "Body Mass Index" = "bmi",
-                                                             "Smoking Status" = "smoking_status"),
-                                                 selected = "age",
-                                                 multiple = TRUE),
+                                                             "Smoking Status" = "smoking_status")
+                                                 ),
+                                     br(),
                                      numericInput("mtry", 
                                                   "'mtry': Number of Variables to Randomly Sample at Each Tree Split",
                                                   value = 3,
-                                                  min = 1,
-                                                  max = 4,
+                                                  min = 2,
+                                                  max = 7,
                                                   step = 1
                                                   ),
                                      actionButton("go", "Fit My Models!")
                                    ),
                                    mainPanel(
-                                     h4("Logistic Regression Model"),
+                                     # Print out RMSE
+                                     h3("Training Data Fit"),
+                                     h4("Fit Statistic RMSE (Root Mean Squared Error) by Model: "),
+                                     DTOutput("rmseTraining"),
+                                     # Print summary of lr
+                                     h4("Summary of Logistic Regression Model"),
                                      verbatimTextOutput("lrSummary"),
                                      br(),
-                                     h4("Classification Tree Model"),
-                                     verbatimTextOutput("ctreeSummary"),
+                                     # Print pic of classTree using rpart.plot
+                                     h4("Summary of Classification Tree Model"),
+                                     plotOutput("ctreeVis"),
                                      br(),
+                                     # Print summary of rf - feature importance
                                      h4("Random Forest Model"),
-                                     verbatimTextOutput("rfSummary")
+                                     verbatimTextOutput("featureImport"),
+                                     # Compare models on test set, report fit statistic
+                                     h3("Testing Data Comparison"),
+                                     h4("RMSE by Model: "),
+                                     DTOutput("rmseTesting")
                                    ))),
                                 
   ############## Subtab for Prediction ###############
@@ -183,7 +195,7 @@ shinyUI(fluidPage(
                                                   label = "Choose a model to make predictions:",
                                                   choices = c("Logistic Regression" = "lr",
                                                               "Classification Tree" = "ct",
-                                                              "Random Forest" = "rf"))),
+                                                              "Random Forest" = "rf")),
                                    selectInput("gender", "Gender",
                                                choices = c("Female",
                                                            "Male",
@@ -198,8 +210,8 @@ shinyUI(fluidPage(
                                                choices = c("Yes" = 1,
                                                            "No" = 0)),
                                    selectInput("ever_married", "Ever Married",
-                                               choices = c("Yes" = 1,
-                                                           "No" = 0)),
+                                               choices = c("Yes",
+                                                           "No")),
                                    selectInput("work_type", "Work Type",
                                                choices = c("Is a Child" = "children",
                                                            "Government Job" = "Govt_job",
@@ -220,19 +232,42 @@ shinyUI(fluidPage(
                                                            "Formerly Smoked" = "formerly smoked",
                                                            "Smokes" = "smokes",
                                                            "Unknown" = "Unknown")),
+                                   actionButton("goPredict", "Make Prediction")
+                                   ), # end sidebarpanel
+
                                    
-                                   mainPanel(# scoring models
+                                   mainPanel(
                                      h3("Predicted Outcome"),
                                      verbatimTextOutput("prediction")
                                      
-                                     )),
+                                     ) # end mainPanel
+                                 ) # end sidebarlayout
+                        ), # end tabpanel                                   
+                                   ),
 ################# Data Tab #################
              tabPanel("Data",
                       titlePanel("Data Set"),
                       sidebarLayout(
-                        sidebarPanel(),
-                        mainPanel()
+                        sidebarPanel(
+                          checkboxGroupInput("dataToSave", 
+                                             "Variables to Include: ",
+                                             choices = c("Hypertension" = "hypertension",
+                                                         "Heart Disease" = "heart_disease",
+                                                          "Gender" = "gender",
+                                                          "Age" = "age",
+                                                         "Ever Married" = "ever_married",
+                                                         "Work Type" = "work_type",
+                                                         "Residence Type" = "Residence_type",
+                                                         "Glucose Level" = "avg_glucose_level",
+                                                         "Body Mass Index" = "bmi",
+                                                         "Smoking Status" = "smoking_status"),
+                                             selected = c("gender", "age", "hypertension")),
+                          actionButton("goSave", "Save File")
+                        ),
+                        mainPanel(
+                          DTOutput("dtable")
+                        )
                       ))
   
     
-)))))
+)))

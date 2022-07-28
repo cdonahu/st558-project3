@@ -9,6 +9,7 @@ library(tidyverse)
 library(DT)
 library(rpart)
 library(randomForest)
+library(rpart.plot)
 
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
@@ -95,7 +96,7 @@ shinyServer(function(input, output) {
   ###########  0. Splitting the data ########### 
   modeling <- eventReactive(input$go, {
     
-    # Create a progress bar (not actually showing up, though)
+    # Create a progress bar 
     withProgress(message = "Fitting Models",
                  detail = 'Splitting Data', value = 0, {
                    
@@ -112,7 +113,8 @@ shinyServer(function(input, output) {
     setProgress(1/4, detail = "Logistic Regression")
     
     # Subset user-selected variables to use in models
-    modelingData <- training[,c(input$lrVars, "stroke")]
+    modelingData <- training[,c(input$fitVars, "stroke")] # problem with a column
+    
     # Train model
     lrFit <- train(stroke ~ ., 
                      data = modelingData, 
@@ -135,8 +137,13 @@ shinyServer(function(input, output) {
                  cp = 0.001,
                  trControl = trainControl(method = "cv", 
                                           number = 5))
+  # Not sure I will use this summary, probably just the rpart.plot
   output$ctreeSummary <- renderPrint({
     summary(cTree)
+  })
+  # Make visualization of classification tree for output
+  output$ctreeVis <- renderPlot({ # might need renderPlot
+    rpart.plot(cTree)
   })
   ###########  3. Random Forest ########### 
   
@@ -154,6 +161,7 @@ shinyServer(function(input, output) {
                  preProcess = c("center", "scale"),
                  trControl = trainControl(method = "cv", 
                                           number = 5))
+  # Not sure whether I will use this, or just feature importance
   output$rfSummary <- renderPrint({
     summary(rfFit)
   })
@@ -161,23 +169,34 @@ shinyServer(function(input, output) {
   output$featureImport <- renderPrint({ 
     varImp(rfFit, scale = FALSE)
   })
+  # Get RMSEs on training data
+  lrRMSE <- RMSE(predict(lrFit, newdata = training), training$stroke)
+  ctRMSE <- RMSE(predict(cTree, newdata = training), training$stroke)
+  rfRMSE <- RMSE(predict(rfFit, newdata = training), training$stroke)
   
-  # Get RMSEs
-  lrRMSE <- RMSE(predict(lrFit, newdata = testing), testing$stroke)
-  ctRMSE <- RMSE(predict(cTree, newdata = testing), testing$stroke)
-  rfRMSE <- RMSE(predict(rfFit, newdata = testing), testing$stroke)
-  
-  # Table of RMSEs
-  output$rmse <- renderDT({
+  # Table of RMSEs on training data to output
+  output$rmseTraining <- renderDT({
     data.frame(LogRegression = lrRMSE,
                ClassTree = ctRMSE,
                RandomForest = rfRMSE)
+  
+  # Get RMSEs on testing data
+  lrRMSEtest <- RMSE(predict(lrFit, newdata = testing), testing$stroke)
+  ctRMSEtest <- RMSE(predict(cTree, newdata = testing), testing$stroke)
+  rfRMSEtest <- RMSE(predict(rfFit, newdata = testing), testing$stroke)
+  
+  # Table of RMSEs on testing data to output
+  output$rmseTesting <- renderDT({
+    data.frame(LogRegression = lrRMSEtest,
+               ClassTree = ctRMSEtest,
+               RandomForest = rfRMSEtest)
   })
   c(lrFit, cTree, rfFit)
   
     })
-  }) # end go-button eventreactive} 
-  observe(modeling)
+                 }) # end go-button eventreactive} 
+  })
+  observe(modeling())
   
   ####### Making predictions #######
   # Update based on user selected variables
@@ -208,7 +227,27 @@ shinyServer(function(input, output) {
     
     output$prediction <- renderPrint({ 
       prediction 
+    }) # end renderprint
+  }) # end prediction events
+  
+  ##### Data Tab ####
+  # Get users selected columns
+  dataTab <- reactive({
+    data[,c(input$dataToSave)]
+  })
+  
+  # Save as an output object to render
+  observe({
+    output$dtable <- renderDT({
+      dataTab()
     })
   })
+  
+  # Allow user to export as CSV file
+  observeEvent(input$goSave, {
+    usersExportFile <- dataTab()
+    write_csv(usersExportFile, "Stroke_Data_for_User.csv")
+  })
+
 })
 
