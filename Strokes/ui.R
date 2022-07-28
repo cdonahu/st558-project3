@@ -116,13 +116,13 @@ shinyUI(fluidPage(
                         tabPanel("Info",
                                  mainPanel(
                                    h3("Modeling Information"),
-                                   h4("We will fit three different types of classification model, a set of supervised learning techniques using known-outcome data to make predictions on new data. In this case, the models will predict whether or not an observation in the data set had a stroke."),
+                                   h4("We will fit three different types of classification model, a set of supervised learning techniques using known-outcome data to make predictions on new data. In this case, the models will predict a binary outcome: whether or not an observation in the data set had a stroke."),
                                    br(),
-                                   h4("The types of model we will use are: "),
+                                   h4("The types of machine learning algorithm we will use are: "),
                                    tags$ul(
-                                     tags$li("Logistic Regression"),
-                                     tags$li("Classification Tree"),
-                                     tags$li("Random Forest Classification"))
+                                     tags$li("Logistic Regression: an easily interpreted generalized linear model used to predict the probability of an outcome being a binary class based on one or more explanatory features"),
+                                     tags$li("Classification Tree: this model splits up predictor space into regions, making different predictions for each region, often using the most prevalent class in the region as the predicted outcome"),
+                                     tags$li("Random Forest Classification: averages across many fitted classification trees, decreasing the variance over an individual tree's fit. Random forest uses a random subset of predictors for each tree fit"))
                                  )
                         ),
   ################# Subtab for Fitting #################
