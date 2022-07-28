@@ -54,12 +54,11 @@ shinyServer(function(input, output) {
 # Data exploration tab
   output$graph <- renderPlot({
     
-    # Bar graph -- only one bar showing up??
+    # Bar graph 
     if(input$plotType == "bar"){
       df0 <- df %>%
-        group_by(input$bars, stroke) %>%
-        count(stroke) 
-        ggplot(df0, aes_string(x = input$bars, y = "n", fill = "stroke")) +
+        group_by(!!as.symbol(input$bars), stroke) %>% count(stroke) 
+        ggplot(df0, aes(x = !!as.symbol(input$bars), y = n, fill = stroke)) +
         geom_bar(stat = "identity", position = "fill") +
         labs(title = paste0("Percentage of Observations with ",
                             str_to_title(input$bars),
@@ -72,8 +71,9 @@ shinyServer(function(input, output) {
     
     # Scatterplot  -- points not showing up??
     else if(input$plotType == "scatterplot"){
-      df1 <- df  %>% group_by(age, input$points, stroke) %>% count(stroke) 
-      ggplot(df1, aes_string("age", "n", color = input$points)) +
+      df1 <- df  %>% group_by(age, !!as.symbol(input$points), stroke) %>% 
+        count(stroke) 
+      ggplot(df1, aes(age, n, color = !!as.symbol(input$points))) +
         geom_point() +
         labs(title = paste0("Age Distribution by ", str_to_title(input$points)),
              x = "Age", 
