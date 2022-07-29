@@ -10,6 +10,7 @@ library(DT)
 library(rpart)
 library(randomForest)
 
+
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
                         show_col_types = FALSE)
@@ -68,7 +69,7 @@ shinyServer(function(input, output) {
              y = "Number of Observations")
     }
   })
-  
+  ###########  Data Table  ###########  
   output$summary <- DT::renderDT({
     round <- 2
     df3 <- data[, c("gender", "ever_married", input$var), drop = FALSE]
@@ -79,6 +80,8 @@ shinyServer(function(input, output) {
     names(tab)[3] <- paste(str_to_title(input$summType), str_to_title(input$var), sep = " ")
     tab
   })
+  ###########  MathJax   ########### 
+  
   
   ###########  0. Splitting the data ########### 
   modeling <- eventReactive(input$go, {

@@ -10,7 +10,7 @@ App users need the following packages installed before running the app:
 - caret  
 - DT  
 - rpart  
-- randomForest
+- randomForest  
 
 
 The following code will install the required packages:  

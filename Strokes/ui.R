@@ -104,6 +104,7 @@ shinyUI(fluidPage(
                       )),
 ################# Modeling Tab #################
              navbarMenu("Modeling",
+                        
   # Subtab for Info
                         tabPanel("Info",
                                  mainPanel(
@@ -112,7 +113,11 @@ shinyUI(fluidPage(
                                    br(),
                                    h4("The types of machine learning algorithm we will use are: "),
                                    tags$ul(
-                                     tags$li("Logistic Regression: an easily interpreted generalized linear model used to predict the probability of an outcome being a binary class based on one or more explanatory features. Logistic regression does not require high computational power, and can easily be updated to reflect new data. Drawbacks include high sensitivity to outliers,  high potential for overfitting data in cases where the number of features exceeds the number of observations, and that logistic regression cannot solve non-linear problems. "),
+                                     tags$li("Logistic Regression: an easily interpreted generalized linear model used to predict the probability of an outcome being a binary class based on one or more explanatory features. Unlike linear regression, this technique uses the logit link function as the response, instead of just \\y\\ itself."),
+                                     withMathJax(
+                                       helpText("Logistic Function: $$P = \\frac{1}{1 + e^-{\\beta_0 + \\beta_1x}}$$")
+                                     ),
+                                     p("Logistic regression does not require high computational power, and can easily be updated to reflect new data. Drawbacks include high sensitivity to outliers,  high potential for overfitting data in cases where the number of features exceeds the number of observations, and that logistic regression cannot solve non-linear problems. "),
                                      tags$li("Classification Tree: this model splits up predictor space into regions, making different predictions for each region, often using the most prevalent class in the region as the predicted outcome. This technique produces easily interpretable results, and missing values/outliers do not have as significant impact on the model. Drawbacks include instability--a small change in data can mean a major change in the tree--and a potential increase in required computational power, compared to logistic regression."),
                                      tags$li("Random Forest Classification: averages across many fitted classification trees, decreasing the variance over an individual tree's fit. Random forest uses a random subset of predictors for each tree fit. The randomness helps avoid overfitting, and the model does not require much tuning and experimentation to find the best parameters. Another benefit is the ability to calculate feature importance. Drawbacks are that random forest models take a lot of computational power to train, and are not easily interpretable, like individual decision trees can be."))
                                  )
