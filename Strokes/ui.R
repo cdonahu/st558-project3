@@ -4,19 +4,17 @@
 # ST558, Summer 2022
 #
 
-
 library(shiny)
 library(caret)
 library(tidyverse)
 library(DT)
 library(rpart)
 library(randomForest)
-library(rpart.plot)
 
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
                         show_col_types = FALSE)
-# Make categorical columns into factors
+# Make all categorical columns into factors
 data$stroke <- factor(data$stroke)
 data$gender <- factor(data$gender)
 data$ever_married <- factor(data$ever_married)
@@ -39,16 +37,6 @@ df$hypertension <- factor(df$hypertension)
 df$heart_disease <- factor(df$heart_disease) 
 df$stroke <- factor(df$stroke) 
 
-# Make some dummy variables
-# gender, work_type, Residence_type, smoking_status
-dummies <- dummyVars(age ~ ., data = data)
-addDummy <- data.frame(predict(dummies, newdata = data))
-# keep the columns I want
-data2 <- data.frame(cbind(data[,c(1:5, 8:9,11)], addDummy[,c(8:14, 17:20)]))
-# Reorder columns so stroke is last 
-columnOrder <- c(1:7, 9:19, 8)
-data2 <- data2[, columnOrder]
-
 ################# Define UI #################
 shinyUI(fluidPage(
   
@@ -66,9 +54,9 @@ shinyUI(fluidPage(
                         br(),
                         h4("The navigation bar contains links to the following pages: "),
                         tags$ul(
-                          tags$li("Data Exploration: summarize and plot selected data"),
-                          tags$li("Modeling: fit multiple supervised learning models, and make predictions using the selected model"),
-                          tags$li("Data: browse through the data set, and save a file"))
+                          tags$li("Data Exploration: summarize and plot user-selected data"),
+                          tags$li("Modeling: fit and compare multiple supervised learning models, and make predictions on user-designed observation"),
+                          tags$li("Data: browse through the data set, and save a customized file"))
                       )
                       ),
 ################# Data Exploration Tab #################
@@ -120,13 +108,13 @@ shinyUI(fluidPage(
                         tabPanel("Info",
                                  mainPanel(
                                    h3("Modeling Information"),
-                                   h4("We will fit three different types of classification model, a set of supervised learning techniques using known-outcome data to make predictions on new data. In this case, the models will predict a binary outcome: whether or not an observation in the data set had a stroke."),
+                                   h4("We will fit three different types of classification model, each one a supervised learning technique using known-outcome data to make predictions on new data. In this case, the models will predict a binary outcome: whether or not an observation in the data set had a stroke."),
                                    br(),
                                    h4("The types of machine learning algorithm we will use are: "),
                                    tags$ul(
-                                     tags$li("Logistic Regression: an easily interpreted generalized linear model used to predict the probability of an outcome being a binary class based on one or more explanatory features"),
-                                     tags$li("Classification Tree: this model splits up predictor space into regions, making different predictions for each region, often using the most prevalent class in the region as the predicted outcome"),
-                                     tags$li("Random Forest Classification: averages across many fitted classification trees, decreasing the variance over an individual tree's fit. Random forest uses a random subset of predictors for each tree fit"))
+                                     tags$li("Logistic Regression: an easily interpreted generalized linear model used to predict the probability of an outcome being a binary class based on one or more explanatory features. Logistic regression does not require high computational power, and can easily be updated to reflect new data. Drawbacks include high sensitivity to outliers,  high potential for overfitting data in cases where the number of features exceeds the number of observations, and that logistic regression cannot solve non-linear problems. "),
+                                     tags$li("Classification Tree: this model splits up predictor space into regions, making different predictions for each region, often using the most prevalent class in the region as the predicted outcome. This technique produces easily interpretable results, and missing values/outliers do not have as significant impact on the model. Drawbacks include instability--a small change in data can mean a major change in the tree--and a potential increase in required computational power, compared to logistic regression."),
+                                     tags$li("Random Forest Classification: averages across many fitted classification trees, decreasing the variance over an individual tree's fit. Random forest uses a random subset of predictors for each tree fit. The randomness helps avoid overfitting, and the model does not require much tuning and experimentation to find the best parameters. Another benefit is the ability to calculate feature importance. Drawbacks are that random forest models take a lot of computational power to train, and are not easily interpretable, like individual decision trees can be."))
                                  )
                         ),
   ################# Subtab for Fitting #################
@@ -167,23 +155,33 @@ shinyUI(fluidPage(
                                    mainPanel(
                                      # Print out RMSE
                                      h3("Training Data Fit"),
-                                     h4("Fit Statistic RMSE (Root Mean Squared Error) by Model: "),
-                                     DTOutput("rmseTraining"),
+                                     h4("Accuracy by Model: "),
+                                     DTOutput("accuracy"),
+                                     
                                      # Print summary of lr
-                                     h4("Summary of Logistic Regression Model"),
+                                     h4("Logistic Regression Model"),
                                      verbatimTextOutput("lrSummary"),
                                      br(),
-                                     # Print pic of classTree using rpart.plot
-                                     h4("Summary of Classification Tree Model"),
-                                     plotOutput("ctreeVis"),
+                                     
+                                     # Print summary of classTree 
+                                     h4("Classification Tree Model"),
+                                     verbatimTextOutput("ctreeSummary"),
                                      br(),
+                                     
                                      # Print summary of rf - feature importance
                                      h4("Random Forest Model"),
+                                     verbatimTextOutput("rfSummary"),
                                      verbatimTextOutput("featureImport"),
+                                     br(),
                                      # Compare models on test set, report fit statistic
                                      h3("Testing Data Comparison"),
-                                     h4("RMSE by Model: "),
-                                     DTOutput("rmseTesting")
+                                     h4("Confusion Matrices by Model: "),
+                                     p("Logistic Regression: "),
+                                     verbatimTextOutput("lrConfusionMatrix"),
+                                     p("Classification Tree: "),
+                                     verbatimTextOutput("ctConfusionMatrix"),
+                                     p("Random Forest: "),
+                                     verbatimTextOutput("rfConfusionMatrix")
                                    ))),
                                 
   ############## Subtab for Prediction ###############
@@ -193,13 +191,11 @@ shinyUI(fluidPage(
                                    sidebarPanel(
                                      radioButtons("modelForPred", 
                                                   label = "Choose a model to make predictions:",
-                                                  choices = c("Logistic Regression" = "lr",
-                                                              "Classification Tree" = "ct",
-                                                              "Random Forest" = "rf")),
+                                                  choices = c("Logistic Regression" = "lrFit",
+                                                              "Classification Tree" = "cTree",
+                                                              "Random Forest" = "rfFit")),
                                    selectInput("gender", "Gender",
-                                               choices = c("Female",
-                                                           "Male",
-                                                           "Other")),
+                                               choices = levels(data$gender)),
                                    numericInput("age", "Age",
                                                value = 38, min = 0, max = 125,
                                                step = 1),
@@ -210,17 +206,11 @@ shinyUI(fluidPage(
                                                choices = c("Yes" = 1,
                                                            "No" = 0)),
                                    selectInput("ever_married", "Ever Married",
-                                               choices = c("Yes",
-                                                           "No")),
+                                               choices = levels(data$ever_married)),
                                    selectInput("work_type", "Work Type",
-                                               choices = c("Is a Child" = "children",
-                                                           "Government Job" = "Govt_job",
-                                                           "Has Never Worked" = "Never_worked",
-                                                           "Private Sector Job" = "Private",
-                                                           "Self-Employed" = "Self-employed")),
+                                               choices = levels(data$work_type)),
                                    selectInput("Residence_type", "Type of Residence",
-                                               choices = c("Urban",
-                                                           "Rural")),
+                                               choices = levels(data$Residence_type)),
                                    numericInput("avg_glucose_level", "Average Glucose Level",
                                                 value = 95, min = 50, max = 275,
                                                 step = 5),
@@ -228,10 +218,7 @@ shinyUI(fluidPage(
                                                 value = 28, min = 7, max = 100,
                                                 step = 1),
                                    selectInput("smoking_status", "Smoking Status",
-                                               choices = c("Never Smoked" = "never smoked",
-                                                           "Formerly Smoked" = "formerly smoked",
-                                                           "Smokes" = "smokes",
-                                                           "Unknown" = "Unknown")),
+                                               choices = levels(data$smoking_status)),
                                    actionButton("goPredict", "Make Prediction")
                                    ), # end sidebarpanel
 

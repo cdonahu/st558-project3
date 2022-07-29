@@ -9,12 +9,11 @@ library(tidyverse)
 library(DT)
 library(rpart)
 library(randomForest)
-library(rpart.plot)
 
 ################# Read in and clean the data #################
 data <- readr::read_csv(file = "../strokeData.csv",
                         show_col_types = FALSE)
-# Make categorical columns into factors
+# Make all categorical columns into factors
 data$stroke <- factor(data$stroke)
 data$gender <- factor(data$gender)
 data$ever_married <- factor(data$ever_married)
@@ -37,20 +36,8 @@ df <- data %>%
   df$heart_disease <- factor(df$heart_disease) 
   df$stroke <- factor(df$stroke) 
 
-  ###########  Make some dummy variables ########### 
-# gender, work_type, Residence_type, smoking_status
-dummies <- dummyVars(age ~ ., data = data)
-addDummy <- data.frame(predict(dummies, newdata = data))
-# keep the columns I want
-data2 <- data.frame(cbind(data[,c(1:5, 8:9,11)], addDummy[,c(8:14, 17:20)]))
-# Reorder columns so stroke is last 
-columnOrder <- c(1:7, 9:19, 8)
-data2 <- data2[, columnOrder]
-
-
 ###########  Define server logic ########### 
 shinyServer(function(input, output) {
-  
   
   ###########  Data exploration tab ########### 
   output$graph <- renderPlot({
@@ -96,6 +83,9 @@ shinyServer(function(input, output) {
   ###########  0. Splitting the data ########### 
   modeling <- eventReactive(input$go, {
     
+    # Subset user-selected variables to use in models
+    modelingData <- data[,c(input$fitVars, "stroke")] 
+    
     # Create a progress bar 
     withProgress(message = "Fitting Models",
                  detail = 'Splitting Data', value = 0, {
@@ -104,98 +94,93 @@ shinyServer(function(input, output) {
     strokeIdx <- createDataPartition(y = data2$stroke,
                                      p = input$splitPct,
                                      list = FALSE)
-    training <- data2[strokeIdx, ]
-    testing <- data2[-strokeIdx, ]
+    training <- modelingData[strokeIdx, ]
+    testing <- modelingData[-strokeIdx, ]
 
     #########  1. Logistic Regression ######### 
     
     # Increment the progress bar, and update the detail text.
-    setProgress(1/4, detail = "Logistic Regression")
-    
-    # Subset user-selected variables to use in models
-    modelingData <- training[,c(input$fitVars, "stroke")] # problem with a column
+    setProgress(1/6, detail = "Logistic Regression")
     
     # Train model
     lrFit <- train(stroke ~ ., 
-                     data = modelingData, 
+                     data = training, 
                      method = "glm",
                      family = "binomial",
                      preProcess = c("center", "scale"),
                      trControl = trainControl(method = "cv", number = 5))
+    # Output a summary of the model to print out to user
     output$lrSummary <- renderPrint({
-      summary(lrFit)
+      lrFit$finalModel
     })
     ###########  2. Classification Tree ########### 
     
     # Increment the progress bar, and update the detail text.
-    setProgress(2/4, detail = "Classification Tree")
+    setProgress(2/6, detail = "Classification Tree")
     
   cTree <- train(stroke ~ .,
-                 data = modelingData,
+                 data = training,
                  method = "rpart",
                  preProcess = c("center", "scale"),
                  cp = 0.001,
                  trControl = trainControl(method = "cv", 
                                           number = 5))
-  # Not sure I will use this summary, probably just the rpart.plot
-  output$ctreeSummary <- renderPrint({
-    summary(cTree)
-  })
-  # Make visualization of classification tree for output
-  output$ctreeVis <- renderPlot({ # might need renderPlot
-    rpart.plot(cTree)
+
+  # Print classification tree somehow for output
+  output$ctreeSummary <- renderPrint({ 
+    cTree
   })
   ###########  3. Random Forest ########### 
   
   # Increment the progress bar, and update the detail text.
-  setProgress(3/4, detail = "Random Forest Model")
+  setProgress(3/6, detail = "Random Forest Model")
   
   # set up the mtry parameter 
   tunegrid <- expand.grid(.mtry=c(1:input$mtry)) # Update as user selects
   
   #train model
   rfFit <- train(stroke ~ .,
-                 data = modelingData,
+                 data = training,
                  method = "rf",
                  tuneGrid = tunegrid,
                  preProcess = c("center", "scale"),
                  trControl = trainControl(method = "cv", 
                                           number = 5))
-  # Not sure whether I will use this, or just feature importance
-  output$rfSummary <- renderPrint({
-    summary(rfFit)
-  })
+  # Increment the progress bar, and update the detail text.
+  setProgress(4/6, detail = "Evaluating Models")
+  
   # Feature importance for random forest
   output$featureImport <- renderPrint({ 
     varImp(rfFit, scale = FALSE)
   })
-  # Get RMSEs on training data
-  lrRMSE <- RMSE(predict(lrFit, newdata = training), training$stroke)
-  ctRMSE <- RMSE(predict(cTree, newdata = training), training$stroke)
-  rfRMSE <- RMSE(predict(rfFit, newdata = training), training$stroke)
   
-  # Table of RMSEs on training data to output
-  output$rmseTraining <- renderDT({
-    data.frame(LogRegression = lrRMSE,
-               ClassTree = ctRMSE,
-               RandomForest = rfRMSE)
-  
-  # Get RMSEs on testing data
-  lrRMSEtest <- RMSE(predict(lrFit, newdata = testing), testing$stroke)
-  ctRMSEtest <- RMSE(predict(cTree, newdata = testing), testing$stroke)
-  rfRMSEtest <- RMSE(predict(rfFit, newdata = testing), testing$stroke)
-  
-  # Table of RMSEs on testing data to output
-  output$rmseTesting <- renderDT({
-    data.frame(LogRegression = lrRMSEtest,
-               ClassTree = ctRMSEtest,
-               RandomForest = rfRMSEtest)
-  })
-  c(lrFit, cTree, rfFit)
-  
+  # Get Accuracy on training data
+  output$accuracy <- renderDT({ 
+    datatable(round(data.frame("Logistic Regression" = lrFit$results$Accuracy,
+                               "Classification Tree" = mean(cTree$results$Accuracy),
+                               "Random Forest" = mean(rfFit$results$Accuracy)), 3))
     })
-                 }) # end go-button eventreactive} 
+  
+  # Increment the progress bar, and update the detail text.
+  setProgress(5/6, detail = "Generating Table")
+  
+  # Confusion Matrix from testing data for each model to output
+  output$lrConfusionMatrix <- renderPrint({ 
+    confusionMatrix(predict(lrFit, newdata = testing), testing$stroke)
   })
+  output$ctConfusionMatrix <- renderPrint({ 
+    confusionMatrix(predict(cTree, newdata = testing), testing$stroke)
+  })
+  output$rfConfusionMatrix <- renderPrint({ 
+    confusionMatrix(predict(rfFit, newdata = testing), testing$stroke)
+  })
+  
+  
+  }) # end progress bar 
+    
+  c(lrFit, cTree, rfFit)
+                 }) # end go-button eventreactive} 
+
   observe(modeling())
   
   ####### Making predictions #######
@@ -211,19 +196,14 @@ shinyServer(function(input, output) {
                            avg_glucose_level = input$avg_glucose_level, 
                            bmi = input$bmi, 
                            smoking_status = input$smoking_status)
-    # predict()
-    if(input$modelForPred == "lr"){ 
-      model <- modeling()[[1]]
-      prediction <- predict(model, newdata = predVars)
-    }
-    else if(input$predModel == "ct"){ 
-      model <- modeling()[[2]]
-      prediction <- predict(model, newdata = predVars)
-    }
-    else { 
-      model <- modeling()[[3]]
-      prediction <- predict(model, newdata = predVars)
-    }
+    
+    # Subset user-selected variables to use in models
+    predData <- predVars[,c(input$fitVars)]
+    
+    # predict() (Warning: Error in [[: object of type 'symbol' is not subsettable)
+    modelChoice <- input$modelForPred
+    modelChoice <- as.name(modelChoice)
+    prediction <- caret::predict.train(modelChoice, newdata = predData)
     
     output$prediction <- renderPrint({ 
       prediction 
