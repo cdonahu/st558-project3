@@ -94,7 +94,7 @@ shinyServer(function(input, output) {
                  detail = 'Splitting Data', value = 0, {
                    
     set.seed(89)
-    strokeIdx <- createDataPartition(y = data2$stroke,
+    strokeIdx <- createDataPartition(y = data$stroke,
                                      p = input$splitPct,
                                      list = FALSE)
     training <- modelingData[strokeIdx, ]
@@ -181,7 +181,7 @@ shinyServer(function(input, output) {
   
   }) # end progress bar 
     
-  c(lrFit, cTree, rfFit)
+  list(lrFit, cTree, rfFit)
                  }) # end go-button eventreactive} 
 
   observe(modeling())
@@ -191,8 +191,8 @@ shinyServer(function(input, output) {
   observeEvent(input$goPredict, { 
     predVars <- data.frame(gender = input$gender, 
                            age = input$age, 
-                           hypertension = input$hypertension, 
-                           heart_disease = input$heart_disease, 
+                           hypertension = as.numeric(input$hypertension), 
+                           heart_disease = as.numeric(input$heart_disease), 
                            ever_married = input$ever_married, 
                            work_type = input$work_type, 
                            Residence_type = input$Residence_type, 
@@ -200,13 +200,18 @@ shinyServer(function(input, output) {
                            bmi = input$bmi, 
                            smoking_status = input$smoking_status)
     
-    # Subset user-selected variables to use in models
-    predData <- predVars[,c(input$fitVars)]
+    # Subset user-selected variables to use in models (not using this )
+    #predData <- predVars[,c(input$fitVars)]
     
-    # predict() (Warning: Error in [[: object of type 'symbol' is not subsettable)
-    modelChoice <- input$modelForPred
-    modelChoice <- as.name(modelChoice)
-    prediction <- caret::predict.train(modelChoice, newdata = predData)
+    # predict() based on method user selects
+    if(input$modelForPred == "lr"){
+      modelChoice <- modeling()[[1]]
+    }else if(input$modelForPred == "ct"){
+      modelChoice <- modeling()[[2]]
+    }else if(input$modelForPred == "rf"){
+      modelChoice <- modeling()[[3]]
+    }
+    prediction <- caret::predict.train(modelChoice, newdata = predVars)
     
     output$prediction <- renderPrint({ 
       prediction 
